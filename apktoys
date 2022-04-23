@@ -20,7 +20,7 @@ __at_cd_aports() {
 # parsing.
 __at_argparse() {
 	local further_arguments_are_parameters
-	further_arguments_are_parameters=1
+	further_arguments_are_parameters=0
 
 	args=''
 	params=''
@@ -28,11 +28,11 @@ __at_argparse() {
 	for arg in $*; do
 		if [ "$arg" = '--' ]; then
 			# -- passed, all further arguments are parameters
-			further_arguments_are_parameters=0
+			further_arguments_are_parameters=1
 			continue
 		fi
 
-		if [ ! "$further_arguments_are_parameters" ] && \
+		if [ "$further_arguments_are_parameters" = '1' ] && \
 			[ "${arg::1}" = '-' ]; then
 			args="$args $arg"
 		else
@@ -40,7 +40,10 @@ __at_argparse() {
 		fi
 	done
 
-	echo "$args: $params"
+	args="$(echo $args | sed -e 's/^[[:space:]]*//')"
+	params="$(echo $params | sed -e 's/^[[:space:]]*//')"
+
+	echo "$args:$params"
 }
 
 # `__at_require_pkgname` - checks if a pkgname was provided as an argument
@@ -51,8 +54,8 @@ __at_require_pkgname() {
 	fi
 
 	for pkg in $*; do
-		if ! find "$APORTS_DIRECTORY" -name $pkg &>/dev/null; then
-			echo 'package "$pkg" not found'
+		if [ ! $(find "$APORTS_DIRECTORY" -name $pkg -type d) ]; then
+			echo "package '$pkg' not found"
 			return 1
 		fi
 	done
@@ -70,7 +73,7 @@ at_repoforpkg() {
 		*'/'*) echo "$1"; return 0;; # already in repository/pkgname format
 	esac
 
-	directory="$(find $APORTS_DIRECTORY -name $1 | head -n1)"
+	directory="$(find $APORTS_DIRECTORY -name $1 -type d | head -n1)"
 	clean_name="${directory/$APORTS_DIRECTORY/}"
 
 	if [ "${clean_name::1}" = '/' ]; then
