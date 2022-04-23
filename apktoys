@@ -1,0 +1,125 @@
+#!/bin/sh
+# apktoys
+
+# Your local aports directory.
+APORTS_DIRECTORY="$HOME"/aports
+
+# Internal functions
+
+# `__at_cd_aports` - changes the current working directory to aports and
+# uses a trap to cd back into the previous directory on exit
+__at_cd_aports() {
+	current_dir="$PWD"
+	cd "$APORTS_DIRECTORY"
+	trap "cd $current_dir" EXIT INT TERM
+}
+
+# `__at_argparse` - separates arguments (all that starts with -, unless --
+# specified) from regular parameters. Returns the arguments, then :, then
+# the parameters, allowing for end users to split the two apart for further
+# parsing.
+__at_argparse() {
+	local further_arguments_are_parameters
+	further_arguments_are_parameters=1
+
+	args=''
+	params=''
+
+	for arg in $*; do
+		if [ "$arg" = '--' ]; then
+			# -- passed, all further arguments are parameters
+			further_arguments_are_parameters=0
+			continue
+		fi
+
+		if [ ! "$further_arguments_are_parameters" ] && \
+			[ "${arg::1}" = '-' ]; then
+			args="$args $arg"
+		else
+			params="$params $arg"
+		fi
+	done
+
+	echo "$args: $params"
+}
+
+# `__at_require_pkgname` - checks if a pkgname was provided as an argument
+__at_require_pkgname() {
+	if [ ! $1 ]; then
+		echo "tool requires package name to be passed"
+		return 1
+	fi
+
+	for pkg in $*; do
+		if ! find "$APORTS_DIRECTORY" -name $pkg &>/dev/null; then
+			echo 'package "$pkg" not found'
+			return 1
+		fi
+	done
+
+	return 0
+}
+
+# `at-repoforpkg <package>` - returns a string like `repository/pkgname`.
+# usually used internally for the other commands, but may be useful in other
+# cases.
+at_repoforpkg() {
+	__at_require_pkgname $1 || return 1
+
+	case $1 in
+		*'/'*) echo "$1"; return 0;; # already in repository/pkgname format
+	esac
+
+	directory="$(find $APORTS_DIRECTORY -name $1 | head -n1)"
+	clean_name="${directory/$APORTS_DIRECTORY/}"
+
+	if [ "${clean_name::1}" = '/' ]; then
+		echo "${clean_name/\//}"
+	else
+		echo "$clean_name"
+	fi
+}
+
+# `at-newpkg <package> [<package> <package> ...]` - takes package names and
+# commits the packages with the given names.
+at_newpkg() {
+	argparse="$(__at_argparse $*)"
+	args="$(echo $argparse | cut -d: -f1)"
+	pkgs="${argparse##$args:}"
+
+	__at_require_pkgname $pkgs || return 1
+	__at_cd_aports
+
+	if [ $2 ]; then
+		# More than 2 packages; rebase
+		git reset --hard origin/master
+	fi
+
+	echo $pkgs
+
+	for pkg in $pkgs; do
+		pkg_with_repo="$(at_repoforpkg $pkg)"
+		git add "$APORTS_DIRECTORY/$pkg_with_repo"
+		cd "$APORTS_DIRECTORY/$pkg_with_repo"
+		source APKBUILD
+		msg="$pkg_with_repo: new aport
+
+$url
+$pkgdesc"
+		if git show HEAD | grep "$pkg_with_repo: new aport"; then
+			git commit --amend -m "$msg"
+		else
+			git commit -m "$msg"
+		fi
+	done
+}
+
+if [ $1 ]; then
+	command=$1
+	shift
+	case $command in
+		'repoforpkg') at_repoforpkg $1 || exit 1;;
+		'newpkg') at_newpkg $@ || exit 1;;
+		*) echo "Unknown command $command"; exit 1;;
+	esac
+fi
