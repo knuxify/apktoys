@@ -14,7 +14,7 @@ personal collection of packaging helpers
 * `at-newpkg <package> [<package> <package> ...]` - takes package names and commits the packages with the given names.
 * (TODO) `at-upgrade <package> <version>` - edits the package's APKBUILD to modify the pkgver and pkgrel, and updates the checksum. you still need to build the package manually and change anything that's needed!
 * (TODO) `at-move <source-repository>/<package> <target-repository>` - moves a package from one repository to another.
-* (TODO) `at-commit <template> <package> [--amend/-m]` - runs a git commit from a given template. `<template>` is one of `newpkg`, `upgrade`, `move`.
+* `at-commit <template> <package> [data] [--amend/-m]` - runs a git commit from a given template. `<template>` is one of `upgrade`, `move`. `[data]` is used differently depending on the template: for `upgrade` it's the new version, for `move` it's the old repository.
 * (TODO) `at-lint [<package>]` - lints a package and checks for common errors. if no package is provided, assumes current directory. reccomended to set as a pre-commit hook.
 * (TODO) `at-commit-lint [<commit>]` - checks if the commit is correct, i.e. only contains what needs to be contained. if commit is not provided, assumes latest commit. reccomended to set as a post-commit hook.
 * (TODO) `at-install-makedepends [<package>]` - installs depends, makedepends and checkdepends for the package. if not provided, assumes current working directory.

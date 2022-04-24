@@ -83,6 +83,43 @@ at_repoforpkg() {
 	fi
 }
 
+# `at-commit <template> <package> [data] [--amend/-m]` - runs a git commit from
+# a given template. `<template>` is one of `upgrade`, `move`.
+#
+# `[data]` is used differently depending on the template: for `upgrade` it's
+# the new version, for `move` it's the old repository.
+at_commit() {
+	argparse="$(__at_argparse $*)"
+
+	amend=1
+	for arg in $args; do
+		case $arg in
+			'--amend'|'-m') amend=0
+		esac
+	done
+
+	template="$(echo $argparse | cut -d ' ' -f1)"
+	template="${template:1}" # strip leading :
+	raw_package="$(echo $argparse | cut -d ' ' -f2)"
+	data="$(echo $argparse | cut -d ' ' -f3)"
+
+	__at_require_pkgname $raw_package
+
+	package="$(at_repoforpkg $raw_package)"
+
+	case $template in
+		'upgrade') msg="$package: upgrade to $data";;
+		'move') msg="$package: move from $data";;
+		*) echo "Invalid template $template"; exit 1;;
+	esac
+
+	if [ $amend ]; then
+		git commit --amend -m "$msg"
+	else
+		git commit -m "$msg"
+	fi
+}
+
 # `at-newpkg <package> [<package> <package> ...]` - takes package names and
 # commits the packages with the given names.
 at_newpkg() {
@@ -105,6 +142,7 @@ at_newpkg() {
 		git add "$APORTS_DIRECTORY/$pkg_with_repo"
 		cd "$APORTS_DIRECTORY/$pkg_with_repo"
 		source APKBUILD
+
 		msg="$pkg_with_repo: new aport
 
 $url
@@ -123,6 +161,7 @@ if [ $1 ]; then
 	case $command in
 		'repoforpkg') at_repoforpkg $1 || exit 1;;
 		'newpkg') at_newpkg $@ || exit 1;;
+		'commit') at_commit $@ || exit 1;;
 		*) echo "Unknown command $command"; exit 1;;
 	esac
 fi
