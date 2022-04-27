@@ -150,7 +150,9 @@ at_install_makedepends() {
 	package_path="$APORTS_DIRECTORY"/$(at_repoforpkg $package) || exit 1
 
 	source "$package_path"/APKBUILD
-	$SUDO apk add --virtual .makedepends-$pkgname $depends $checkdepends $makedepends
+	# yes, abuild -r uses .makedepends-$pkname, but it also autoremoves it,
+	# which is kind of counterintuitive... so we use our own custom name
+	$SUDO apk add --virtual .at-makedepends-$pkgname $depends $checkdepends $makedepends
 }
 
 if [ $1 ]; then
