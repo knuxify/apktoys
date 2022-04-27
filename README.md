@@ -17,5 +17,5 @@ personal collection of packaging helpers
 * `at-commit <template> <package> [data] [--amend/-m]` - runs a git commit from a given template. `<template>` is one of `upgrade`, `move`. `[data]` is used differently depending on the template: for `upgrade` it's the new version, for `move` it's the old repository.
 * (TODO) `at-lint [<package>]` - lints a package and checks for common errors. if no package is provided, assumes current directory. reccomended to set as a pre-commit hook.
 * (TODO) `at-commit-lint [<commit>]` - checks if the commit is correct, i.e. only contains what needs to be contained. if commit is not provided, assumes latest commit. reccomended to set as a post-commit hook.
-* (TODO) `at-install-makedepends [<package>]` - installs depends, makedepends and checkdepends for the package. if not provided, assumes current working directory.
+* `at-install-makedepends [<package>]` - installs depends, makedepends and checkdepends for the package. if package name is not provided, assumes name from current working directory.
 * `at-repoforpkg <package>` - returns a string like `repository/pkgname`. usually used internally for the other commands, but may be useful in other cases.

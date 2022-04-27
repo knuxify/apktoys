@@ -137,13 +137,34 @@ $pkgdesc"
 	done
 }
 
+# `at-install-makedepends [<package>]` - installs depends, makedepends and
+# checkdepends for the package. if package name is not provided, assumes
+# name from current working directory.
+at_install_makedepends() {
+	if [ ! $1 ]; then
+		package="$(basename $PWD)"
+	else
+		package=$1
+	fi
+
+	package_path="$APORTS_DIRECTORY"/$(at_repoforpkg $package) || exit 1
+
+	source "$package_path"/APKBUILD
+	$SUDO apk add --virtual .makedepends-$pkgname $depends $checkdepends $makedepends
+}
+
 if [ $1 ]; then
+	if [ ! $SUDO ]; then
+		SUDO=sudo
+	fi
+
 	command=$1
 	shift
 	case $command in
 		'repoforpkg') at_repoforpkg $1 || exit 1;;
 		'newpkg') at_newpkg $@ || exit 1;;
 		'commit') at_commit $@ || exit 1;;
+		'install-makedepends') at_install_makedepends $1 || exit 1;;
 		*) echo "Unknown command $command"; exit 1;;
 	esac
 fi
