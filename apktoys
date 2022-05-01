@@ -76,10 +76,10 @@ at_repoforpkg() {
 at_commit() {
 	argparse="$(__at_argparse $*)"
 
-	amend=1
+	amend='false'
 	for arg in $args; do
 		case $arg in
-			'--amend'|'-m') amend=0
+			'--amend'|'-m') amend='true'
 		esac
 	done
 
@@ -96,7 +96,7 @@ at_commit() {
 		*) echo "Invalid template $template"; exit 1;;
 	esac
 
-	if [ $amend ]; then
+	if [ "$amend" = 'true' ]; then
 		git commit --amend -m "$msg"
 	else
 		git commit -m "$msg"
