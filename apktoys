@@ -73,6 +73,7 @@ at_repoforpkg() {
 #
 # `[data]` is used differently depending on the template: for `upgrade` it's
 # the new version, for `move` it's the old repository.
+# If `package` == pwd, assumes current directory.
 at_commit() {
 	argparse="$(__at_argparse $*)"
 
@@ -88,6 +89,10 @@ at_commit() {
 	raw_package="$(echo $argparse | cut -d ' ' -f2)"
 	data="$(echo $argparse | cut -d ' ' -f3)"
 
+	if [ $raw_package = 'pwd' ]; then
+		raw_package="$(basename $PWD)"
+	fi
+
 	package="$(at_repoforpkg $raw_package)" || exit 1
 
 	case $template in
@@ -95,6 +100,11 @@ at_commit() {
 		'move') msg="$package: move from $data";;
 		*) echo "Invalid template $template"; exit 1;;
 	esac
+
+	set -e
+	git reset
+	git add "$APORTS_DIRECTORY"/$package
+	set +e
 
 	if [ "$amend" = 'true' ]; then
 		git commit --amend -m "$msg"
