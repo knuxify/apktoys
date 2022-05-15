@@ -147,6 +147,13 @@ $pkgdesc"
 	done
 }
 
+# `at-upgrade <package> <version> [--amend/-m]` - shorthand for
+# `at-commit upgrade <package> <version> [--amend/-m]`, you still need to do
+# everything else manually.
+at_upgrade() {
+	at_commit upgrade $1 $2 $3
+}
+
 # `at-install-makedepends [<package>]` - installs depends, makedepends and
 # checkdepends for the package. if package name is not provided, assumes
 # name from current working directory.
@@ -176,6 +183,7 @@ if [ $1 ]; then
 		'repoforpkg') at_repoforpkg $1 || exit 1;;
 		'newpkg') at_newpkg $@ || exit 1;;
 		'commit') at_commit $@ || exit 1;;
+		'upgrade') at_upgrade $@ || exit 1;;
 		'install-makedepends') at_install_makedepends $1 || exit 1;;
 		*) echo "Unknown command $command"; exit 1;;
 	esac
