@@ -104,6 +104,9 @@ at_commit() {
 	set -e
 	git reset
 	git add "$APORTS_DIRECTORY"/$package
+	if [ "$template" = 'move' ]; then
+		git add "$APORTS_DIRECTORY"/$data/"$(basename $package)"
+	fi
 	set +e
 
 	if [ "$amend" = 'true' ]; then
