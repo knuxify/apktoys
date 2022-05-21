@@ -78,9 +78,11 @@ at_commit() {
 	argparse="$(__at_argparse $*)"
 
 	amend='false'
+	do_reset='true'
 	for arg in $args; do
 		case $arg in
-			'--amend'|'-m') amend='true'
+			'--amend'|'-m') amend='true';;
+			'--no-reset'|'-n') do_reset='false';;
 		esac
 	done
 
@@ -101,13 +103,15 @@ at_commit() {
 		*) echo "Invalid template $template"; exit 1;;
 	esac
 
-	set -e
-	git reset
-	git add "$APORTS_DIRECTORY"/$package
-	if [ "$template" = 'move' ]; then
-		git add "$APORTS_DIRECTORY"/$data/"$(basename $package)"
+	if [ $do_reset = 'true' ]; then
+		set -e
+		git reset
+		git add "$APORTS_DIRECTORY"/$package
+		if [ "$template" = 'move' ]; then
+			git add "$APORTS_DIRECTORY"/$data/"$(basename $package)"
+		fi
+		set +e
 	fi
-	set +e
 
 	if [ "$amend" = 'true' ]; then
 		git commit --amend -m "$msg"
