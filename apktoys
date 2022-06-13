@@ -154,11 +154,13 @@ $pkgdesc"
 	done
 }
 
-# `at-upgrade <package> <version> [--amend/-m]` - shorthand for
-# `at-commit upgrade <package> <version> [--amend/-m]`, you still need to do
+# `at-upgrade <package> [--amend/-m]` - shorthand for
+# `at-commit upgrade <package> (pkgver) [--amend/-m]`, you still need to do
 # everything else manually.
 at_upgrade() {
-	at_commit upgrade $1 $2 $3
+	package=$(at_repoforpkg $package)
+	source "$APORTS_DIRECTORY"/$package/APKBUILD
+	at_commit upgrade $package $pkgver $2
 }
 
 # `at-install-makedepends [<package>]` - installs depends, makedepends and
