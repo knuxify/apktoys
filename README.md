@@ -18,4 +18,5 @@ personal collection of packaging helpers
 * (TODO) `at-lint [<package>]` - lints a package and checks for common errors. if no package is provided, assumes current directory. reccomended to set as a pre-commit hook.
 * (TODO) `at-commit-lint [<commit>]` - checks if the commit is correct, i.e. only contains what needs to be contained. if commit is not provided, assumes latest commit. reccomended to set as a post-commit hook.
 * `at-install-makedepends [<package>]` - installs depends, makedepends and checkdepends for the package. if package name is not provided, assumes name from current working directory.
+* `at-uninstall-makedepends [<package>]` - uninstalls makedepends installed with `at-install-makedepends`.
 * `at-repoforpkg <package>` - returns a string like `repository/pkgname`. usually used internally for the other commands, but may be useful in other cases.

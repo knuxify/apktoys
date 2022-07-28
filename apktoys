@@ -180,6 +180,21 @@ at_install_makedepends() {
 	$SUDO apk add --virtual .at-makedepends-$pkgname $depends $checkdepends $makedepends
 }
 
+# `at-uninstall-makedepends [<package>]` - uninstalls makedepends installed by
+# `at-install-makedepends`.
+at_uninstall_makedepends() {
+	if [ ! $1 ]; then
+		package="$(basename $PWD)"
+	else
+		package=$1
+	fi
+
+	package_path="$APORTS_DIRECTORY"/$(at_repoforpkg $package) || exit 1
+
+	source "$package_path"/APKBUILD
+	$SUDO apk del .at-makedepends-$pkgname
+}
+
 if [ $1 ]; then
 	if [ ! $SUDO ]; then
 		SUDO=sudo
@@ -193,6 +208,7 @@ if [ $1 ]; then
 		'commit') at_commit $@ || exit 1;;
 		'upgrade') at_upgrade $@ || exit 1;;
 		'install-makedepends') at_install_makedepends $1 || exit 1;;
+		'uninstall-makedepends') at_uninstall_makedepends $1 || exit 1;;
 		*) echo "Unknown command $command"; exit 1;;
 	esac
 fi
