@@ -2,7 +2,9 @@
 # apktoys
 
 # Your local aports directory.
-APORTS_DIRECTORY="$HOME"/aports
+if ! [ $APORTS_DIRECTORY ]; then
+	APORTS_DIRECTORY="$HOME"/aports
+fi
 
 # Internal functions
 
@@ -43,6 +45,11 @@ __at_argparse() {
 	args="$(echo $args | sed -e 's/^[[:space:]]*//')"
 	params="$(echo $params | sed -e 's/^[[:space:]]*//')"
 
+	if [ ! $args ]; then
+		echo "No package provided... did you mean 'pwd'?" 1>&2;
+		return 1
+	fi
+
 	echo "$args:$params"
 }
 
@@ -57,7 +64,7 @@ at_repoforpkg() {
 		*) pkgname=$1;;
 	esac
 
-	directory="$(find $APORTS_DIRECTORY -name $pkgname -type d -maxdepth 2 | head -n1)"
+	directory="$(find $APORTS_DIRECTORY -maxdepth 2 -name $pkgname -type d | head -n1)"
 	if [ ! "$directory" ]; then
 		echo "Package $pkgname not found" 1>&2
 		exit 1
@@ -125,18 +132,20 @@ at_newpkg() {
 	argparse="$(__at_argparse $*)"
 	args="$(echo $argparse | cut -d: -f1)"
 	pkgs="${argparse##$args:}"
+	pwd_base="$(basename $PWD)"
 
 	__at_cd_aports
 
 	if [ $2 ]; then
 		# More than 2 packages; rebase
-		git reset --hard origin/master
+		git reset origin/master
 	fi
 
-	echo $pkgs
-
 	for pkg in $pkgs; do
+		if [ $pkg = 'pwd' ]; then pkg="$pwd_base"; fi
+		echo $pkg $PWD
 		pkg_with_repo="$(at_repoforpkg $pkg)" || exit 1;
+		echo $pkg_with_repo
 		git add "$APORTS_DIRECTORY/$pkg_with_repo"
 		cd "$APORTS_DIRECTORY/$pkg_with_repo"
 		source APKBUILD
@@ -145,7 +154,7 @@ at_newpkg() {
 
 $url
 $pkgdesc"
-		if git show HEAD | grep "$pkg_with_repo: new aport"; then
+		if git show HEAD | grep "$pkg_with_repo: new aport" &>/dev/null; then
 			git commit --amend -m "$msg"
 		else
 			git commit -m "$msg"
@@ -167,6 +176,8 @@ at_upgrade() {
 # name from current working directory.
 at_install_makedepends() {
 	if [ ! $1 ]; then
+		package="$(basename $PWD)"
+	elif [ $pkg = 'pwd' ]; then
 		package="$(basename $PWD)"
 	else
 		package=$1
