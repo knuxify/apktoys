@@ -45,7 +45,7 @@ __at_argparse() {
 	args="$(echo $args | sed -e 's/^[[:space:]]*//')"
 	params="$(echo $params | sed -e 's/^[[:space:]]*//')"
 
-	if [ ! $args ]; then
+	if [ ! "$params" ]; then
 		echo "No package provided... did you mean 'pwd'?" 1>&2;
 		return 1
 	fi
