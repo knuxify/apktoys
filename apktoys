@@ -8,12 +8,18 @@ fi
 
 # Internal functions
 
+# `__at_cd` - changes the current working directory to the provided dir and
+# uses a trap to cd back into the previous directory on exit
+__at_cd() {
+	current_dir="$PWD"
+	cd "$*"
+	trap "cd $current_dir" EXIT INT TERM
+}
+
 # `__at_cd_aports` - changes the current working directory to aports and
 # uses a trap to cd back into the previous directory on exit
 __at_cd_aports() {
-	current_dir="$PWD"
-	cd "$APORTS_DIRECTORY"
-	trap "cd $current_dir" EXIT INT TERM
+	__at_cd "$APORTS_DIRECTORY"
 }
 
 # `__at_argparse` - separates arguments (all that starts with -, unless --
@@ -178,7 +184,7 @@ at_move() {
 	nocommit=false
 	for arg in $args; do
 		case $arg in
-			'--no-commit') nocommit=true
+			'--no-commit') nocommit=true;;
 		esac
 	done
 
@@ -188,13 +194,55 @@ at_move() {
 	fi
 }
 
-# `at-upgrade <package> [--amend/-m]` - shorthand for
-# `at-commit upgrade <package> (pkgver) [--amend/-m]`, you still need to do
-# everything else manually.
+# `at-upgrade <package> [--no-commit]` - sets the pkgver to the provided
+# version, updates the checksum, tries to find a changelog, builds the
+# app and if all succeeds commits the change
 at_upgrade() {
-	package=$(at_repoforpkg $1) || exit 1
-	source "$APORTS_DIRECTORY"/$package/APKBUILD
-	at_commit upgrade $package $pkgver $2
+	argparse="$(__at_argparse $*)"
+	args="$(echo $argparse | cut -d: -f1)"
+	nonargs="${argparse##$args:}"
+
+	pkg="$(at_repoforpkg $(echo $nonargs | cut -d' ' -f1))" || exit 1;
+	pkgver="$(echo $nonargs | cut -d' ' -f2)"
+	pkgname="$(basename $pkg)"
+
+	__at_cd "$APORTS_DIRECTORY"/"$pkg"
+	sed -i "s/^pkgver=.*/pkgver=$pkgver/" APKBUILD
+	sed -i 's/^pkgrel=.*/pkgrel=0/' APKBUILD
+
+	abuild checksum || exit 1
+
+	# Try to guess changelog path
+	# TODO: use sources for this, do some fancy extraction or whatever. this is
+	# good enough for now
+	url=$(sed -n 's/^url=//p' APKBUILD)
+	changelog=none
+	case $url in
+		*github.com*) changelog=$url/releases/tag/$pkgver;;
+		*) changelog=$url;;
+	esac
+
+	echo "You may be able to find a changelog at the following URL:"
+	echo $changelog
+	read -n1 -p "Build and commit right away? [Y/n] " answer
+	case $answer in
+		''|'y'|'Y') ;;
+		*) exit 0;;
+	esac
+
+	abuild -r || exit 1
+
+	nocommit=false
+	for arg in $args; do
+		case $arg in
+			'--no-commit') nocommit=true
+		esac
+	done
+
+	if [ "$nocommit" = 'false' ]; then
+		git add .
+		at_commit upgrade "$pkg" "$pkgver"
+	fi
 }
 
 # `at-install-makedepends [<package>]` - installs depends, makedepends and
