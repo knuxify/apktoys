@@ -168,7 +168,8 @@ $pkgdesc"
 	done
 }
 
-# `at-move <package> target [--no-commit]` - moves the provided package
+# `at-move <package> <target-repository> [--no-commit]` - moves the provided
+# package to the target repository (testing, community, main, unmaintained)
 # and commits the change.
 at_move() {
 	argparse="$(__at_argparse $*)"

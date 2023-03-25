@@ -12,8 +12,8 @@ personal collection of packaging helpers
 **note**: `<package>` takes either `repository/pkgname` (e.g. `community/xfce4-weather-plugin`) or just `pkgname` as an argument.
 
 * `at-newpkg <package> [<package> <package> ...]` - takes package names and commits the packages with the given names.
-* `at-upgrade <package> <version>` - shorthand for `at-commit upgrade <package> <version>`, you still need to do everything else manually.
-* (TODO) `at-move <source-repository>/<package> <target-repository>` - moves a package from one repository to another.
+* `at-upgrade <package> [--no-commit]` - sets the pkgver to the provided version, updates the checksum, tries to find a changelog, builds the app and if all succeeds commits the change
+* `at-move <package> <target-repository> [--no-commit]` - moves the provided package to the target repository (testing, community, main, unmaintained) and commits the change.
 * `at-commit <template> <package> [data] [--amend/-m]` - runs a git commit from a given template. `<template>` is one of `upgrade`, `move`. `[data]` is used differently depending on the template: for `upgrade` it's the new version, for `move` it's the old repository.
 * (TODO) `at-lint [<package>]` - lints a package and checks for common errors. if no package is provided, assumes current directory. reccomended to set as a pre-commit hook.
 * (TODO) `at-commit-lint [<commit>]` - checks if the commit is correct, i.e. only contains what needs to be contained. if commit is not provided, assumes latest commit. reccomended to set as a post-commit hook.
