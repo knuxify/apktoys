@@ -162,6 +162,32 @@ $pkgdesc"
 	done
 }
 
+# `at-move <package> target [--no-commit]` - moves the provided package
+# and commits the change.
+at_move() {
+	argparse="$(__at_argparse $*)"
+	args="$(echo $argparse | cut -d: -f1)"
+	nonargs="${argparse##$args:}"
+
+	source="$(at_repoforpkg $(echo $nonargs | cut -d' ' -f1))" || exit 1;
+	target="$(echo $nonargs | cut -d' ' -f2)"
+	pkgname="$(basename $source)"
+
+	mv "$source" "$target"/"$pkgname"
+
+	nocommit=false
+	for arg in $args; do
+		case $arg in
+			'--no-commit') nocommit=true
+		esac
+	done
+
+	if [ "$nocommit" = 'false' ]; then
+		git add "$source" "$target"/"$pkgname"
+		at_commit move "$target"/"$pkgname" "$(dirname $source)"
+	fi
+}
+
 # `at-upgrade <package> [--amend/-m]` - shorthand for
 # `at-commit upgrade <package> (pkgver) [--amend/-m]`, you still need to do
 # everything else manually.
@@ -217,6 +243,7 @@ if [ $1 ]; then
 		'repoforpkg') at_repoforpkg $1 || exit 1;;
 		'newpkg') at_newpkg $@ || exit 1;;
 		'commit') at_commit $@ || exit 1;;
+		'move') at_move $@ || exit 1;;
 		'upgrade') at_upgrade $@ || exit 1;;
 		'install-makedepends') at_install_makedepends $1 || exit 1;;
 		'uninstall-makedepends') at_uninstall_makedepends $1 || exit 1;;
