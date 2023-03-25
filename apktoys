@@ -180,6 +180,8 @@ at_move() {
 	target="$(echo $nonargs | cut -d' ' -f2)"
 	pkgname="$(basename $source)"
 
+	__at_cd_aports
+
 	mv "$source" "$target"/"$pkgname"
 
 	nocommit=false
@@ -261,7 +263,7 @@ at_install_makedepends() {
 	package_path="$APORTS_DIRECTORY"/$(at_repoforpkg $package) || exit 1
 
 	source "$package_path"/APKBUILD
-	# yes, abuild -r uses .makedepends-$pkname, but it also autoremoves it,
+	# yes, abuild -r uses .makedepends-$pkgname, but it also autoremoves it,
 	# which is kind of counterintuitive... so we use our own custom name
 	$SUDO apk add --virtual .at-makedepends-$pkgname $depends $checkdepends $makedepends
 }
