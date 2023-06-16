@@ -110,7 +110,11 @@ at_commit() {
 	package="$(at_repoforpkg $raw_package)" || exit 1
 
 	case $template in
-		'upgrade') [ $data = 'pwd' ] && data="$(sed -n 's/^pkgver=//p' APKBUILD)"; msg="$package: upgrade to $data";;
+		'new') source "$APORTS_DIRECTORY"/$package/APKBUILD; msg="$package: new aport
+
+$url
+$pkgdesc";;
+		'upgrade') data="$(sed -n 's/^pkgver=//p' $APORTS_DIRECTORY/$package/APKBUILD)"; msg="$package: upgrade to $data";;
 		'move') msg="$package: move from $data";;
 		*) echo "Invalid template $template"; exit 1;;
 	esac
