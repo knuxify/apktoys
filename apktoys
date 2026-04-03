@@ -59,6 +59,66 @@ __at_argparse() {
 	echo "$args:$params"
 }
 
+# `__at_subpackages <path to APKBUILD>` - list subpackages for package, internal to at-parentpkg
+__at_subpackages() {
+	source "$*"
+	echo $subpackages
+}
+
+# `at-parentpkg <package>` - returns the parent package of the package with
+# the given name.
+at_parentpkg() {
+	case $1 in
+		'') return 1;; # no pkg provided
+		*) pkgname=$1;;
+	esac
+
+	# Attempt 1 - try to find a literal directory
+	directory="$(find $APORTS_DIRECTORY -maxdepth 2 -name $pkgname -type d | head -n1)"
+
+	if [ "$directory" ]; then
+		ret=$(echo "$directory" | awk -F'/' '{print $NF}')
+		echo "$ret"
+		return 0
+	fi
+
+	# Attempt 2 - strip away common suffixes
+	suffix=$(echo "$pkgname" | awk -F'-' '{print $NF}')
+	pkgname_strip=""
+	case $suffix in
+		dev|doc|pyc|libs)
+			pkgname_strip=$(echo "$pkgname" | sed 's/-[^-]*$//');;
+		*) ;;
+	esac
+	if [ "$pkgname_strip" != "" ]; then
+		directory="$(find $APORTS_DIRECTORY -maxdepth 2 -name $pkgname_strip -type d | head -n1)"
+
+		if [ "$directory" ]; then
+			ret=$(echo "$directory" | awk -F'/' '{print $NF}')
+			echo "$ret"
+			return 0
+		fi
+	fi
+
+	# Attempt 3 - grep for subpackage
+	_at_pkgname="$pkgname"  # we will be sourcing, so preserve variable
+	for apkbuild in $(find "$APORTS_DIRECTORY" -maxdepth 3 -name APKBUILD); do
+		subpackages=$(__at_subpackages "$apkbuild")
+		for pkg in $subpackages; do
+			pkg="${pkg%%:*}"
+			if [ $pkg = "pc" ]; then continue; fi
+			if [ $pkg = "$_at_pkgname" ]; then
+				echo $(basename $(dirname "$apkbuild"))
+				return 0
+			fi
+		done
+	done
+
+	# If all else fails, give up
+	echo "Package $pkgname not found" 1>&2
+	exit 1
+}
+
 # `at-repoforpkg <package>` - returns a string like `repository/pkgname`.
 # usually used internally for the other commands, but may be useful in other
 # cases.
@@ -173,7 +233,7 @@ $pkgdesc"
 }
 
 # `at-move <package> <target-repository> [--no-commit]` - moves the provided
-# package to the target repository (testing, community, main, unmaintained)
+# package to the target repository (testing, community, main)
 # and commits the change.
 at_move() {
 	argparse="$(__at_argparse $*)"
@@ -184,9 +244,35 @@ at_move() {
 	target="$(echo $nonargs | cut -d' ' -f2)"
 	pkgname="$(basename $source)"
 
+	if [ "$target" = "$(echo $source | cut -d'/' -f1)" ]; then
+		echo "$source is already in $target"
+		return 0;
+	fi
+
 	__at_cd_aports
 
-	mv "$source" "$target"/"$pkgname"
+	package_path="$APORTS_DIRECTORY"/"$source"
+	all_deps=$(	(source "$package_path"/APKBUILD; echo $depends $makedepends $checkdepends) )
+
+	dep_needs_move=0
+	for dep in $all_deps; do
+		dep=$(at_parentpkg "$dep")
+		dep_category="$(at_repoforpkg $dep | cut -d'/' -f1)"
+		if [ "$target" = "community" ] && [ "$dep_category" = "testing" ]; then
+			echo "$dep needs to be moved from $dep_category: at move $dep $target"
+			dep_needs_move=1
+		elif [ "$target" = "main" ] && [ "$dep_category" = "community" ] || [ "$dep_category" = "testing" ]; then
+			echo "$dep needs to be moved from $dep_category: at move $dep $target"
+			dep_needs_move=1
+		fi
+	done
+
+	if [ "$dep_needs_move" = 1 ]; then
+		echo "Some dependencies need to be moved first."
+		return 1
+	fi
+
+	mv "$source" "$target"/"$pkgname" || return 1
 
 	nocommit=false
 	for arg in $args; do
@@ -300,6 +386,7 @@ if [ $1 ]; then
 	command=$1
 	shift
 	case $command in
+		'parentpkg') at_parentpkg $1 || exit 1;;
 		'repoforpkg') at_repoforpkg $1 || exit 1;;
 		'newpkg') at_newpkg $@ || exit 1;;
 		'commit') at_commit $@ || exit 1;;
